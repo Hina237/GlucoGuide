@@ -1,66 +1,61 @@
 import streamlit as st
 import anthropic
 
-api_key = st.secrets ["claude_api_key"]
+api_key = st.secrets["claude_api_key"]
 
-# Function to generate a meal plan using Claude.ai based on sugar levels and dietary preferences
-def generate_meal_plan(api_key, fasting, pre_meal, post_meal, dietary_pref):
-    # Initialize the Anthropics client with the provided API key
+# Function to call Claude AI API and get a personalized meal plan
+def get_meal_plan(api_key, fasting_sugar, pre_meal_sugar, post_meal_sugar, dietary_preferences):
+    # Initialize the Claude AI client with the provided API key
     client = anthropic.Anthropic(api_key=api_key)
-
-    # Prepare the input message with user data
-    user_input = (
-        f"My fasting sugar level is {fasting} mg/dL, "
-        f"my pre-meal sugar level is {pre_meal} mg/dL, "
-        f"and my post-meal sugar level is {post_meal} mg/dL. "
-        f"My dietary preference is {dietary_pref}. "
-        "Please provide a personalized meal plan considering these details."
+    
+    # Define the prompt to send to Claude AI
+    prompt = (
+        f"My fasting sugar level is {fasting_sugar} mg/dL, "
+        f"my pre-meal sugar level is {pre_meal_sugar} mg/dL, "
+        f"and my post-meal sugar level is {post_meal_sugar} mg/dL. "
+        f"My dietary preferences are {dietary_preferences}. "
+        "Please provide a personalized meal plan that can help me manage my blood sugar levels effectively."
     )
-
-    # Create the message to send to Claude.ai
+    
+    # Call Claude AI API
     message = client.messages.create(
         model="claude-3-5-sonnet-20240620",
         max_tokens=250,
         temperature=0.7,
-        system="You are a world-class nutritionist. Generate a personalized meal plan based on the user's sugar levels and dietary preferences.",
+        system="You are a world-class nutritionist who specializes in diabetes management.",
         messages=[
             {
                 "role": "user",
-                "content": {
-                    "type": "text",
-                    "text": user_input
-                }
+                "content": prompt
             }
         ]
     )
+    
+    raw_context = message.content
+    itinerary = raw_context[0].text
+    return itinerary
 
-    # Extract and return the relevant text from the response
-    return message.get('content', 'No response received')
-
-# Streamlit app setup
+# Streamlit app
 st.title("GlucoGuide")
 
-# App description
 st.write("""
-### Your Personalized Diabetes Management Companion
-
-GlucoGuide is designed to help diabetic patients manage their blood sugar levels through personalized meal plans. 
-By entering your fasting, pre-meal, and post-meal sugar levels, along with your dietary preferences, 
-you can receive a tailored meal plan to support your journey to better health.
+**GlucoGuide** is a personalized meal planning tool designed specifically for diabetic patients. 
+By entering your sugar levels and dietary preferences, GlucoGuide generates meal plans that are 
+tailored to help you manage your blood sugar levels effectively.
 """)
 
-# Sidebar inputs
+# Sidebar inputs for sugar levels and dietary preferences
 st.sidebar.header("Enter Your Details")
 
-fasting_sugar = st.sidebar.number_input("Fasting Sugar Level (mg/dL)", min_value=0, max_value=300, value=100)
-pre_meal_sugar = st.sidebar.number_input("Pre-meal Sugar Level (mg/dL)", min_value=0, max_value=300, value=100)
-post_meal_sugar = st.sidebar.number_input("Post-meal Sugar Level (mg/dL)", min_value=0, max_value=400, value=140)
-dietary_preference = st.sidebar.selectbox("Dietary Preference", ("None", "Vegetarian", "Vegan", "Keto"))
+fasting_sugar = st.sidebar.number_input("Fasting Sugar Levels (mg/dL)", min_value=0, max_value=500, step=1)
+pre_meal_sugar = st.sidebar.number_input("Pre-Meal Sugar Levels (mg/dL)", min_value=0, max_value=500, step=1)
+post_meal_sugar = st.sidebar.number_input("Post-Meal Sugar Levels (mg/dL)", min_value=0, max_value=500, step=1)
 
-# Generate meal plan when the user submits the information
-if st.sidebar.button("Get Meal Plan"):
-    if api_key:
-        meal_plan = generate_meal_plan(api_key, fasting_sugar, pre_meal_sugar, post_meal_sugar, dietary_preference)
-        st.subheader("Your Personalized Meal Plan")
-        st.markDown(meal_plan)
+dietary_preferences = st.sidebar.text_input("Dietary Preferences (e.g., vegetarian, low-carb)")
+
+# Generate meal plan button
+if st.sidebar.button("Generate Meal Plan"):
+    meal_plan = get_meal_plan(api_key, fasting_sugar, pre_meal_sugar, post_meal_sugar, dietary_preferences)
+    st.write("Based on your sugar levels and dietary preferences, here is a personalized meal plan:")
+    st.markdown(meal_plan)
     
